@@ -1,3 +1,12 @@
+Sparse Checkout
+===============
+
+1. Clone the whole repo
+2. cd into the repo
+3. run "git config core.sparsecheckout true"
+4. run "echo <directory_you_want> >> .git/info/sparse-checkout" for each folder you want
+5. run "git read-tree -m -u HEAD"
+
 scripting_projects
 ==================
 
