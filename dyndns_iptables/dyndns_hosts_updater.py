@@ -4,7 +4,11 @@ import os
 import csv
 import socket
 
+# User-changeable Vars
 iptables_file = '/etc/iptables.up.rules'
+update_ip_tables_file = False
+
+# Application-controlled Vars
 csv_file = './dyndns_hosts.csv'
 lock_file = './dyndns_hosts.lock'
 something_changed = False
@@ -117,7 +121,9 @@ for hostname in host_list:
 	if cur_dyndns != last_dyndns:
 		print "Changing address for " + hostname + " from " + last_dyndns + " to " + cur_dyndns
 		host_list[hostname] = cur_dyndns
-		updateIPtablesEntry(hostname,host_list[hostname])
+		if update_ip_tables_file:
+			updateIPtablesEntry(hostname,host_list[hostname])
+		something_changed = True
 	else:
 		#print "there was no change in address for " + hostname + ". It will remain " + host_list[hostname] + "." #DEBUG
 		pass
