@@ -1,0 +1,33 @@
+========================
+Initial Setup:
+========================
+
+1. Set the path to the file that holds all the IPTables rules.
+  - This is located in the file dyndns_hosts_updater.py
+  - The variable looks like "iptables_file = '/etc/iptables.up.rules'"
+
+=========================
+To add a new DYNDNS Host:
+=========================
+
+1. Add a line to dyndns_hosts.csv
+  - Format: <host_name>,<ip_address>
+  - Note: the ip address doesn't need to be correct as it will be
+        pulled from the DNS server when the script is run.  This field
+         will house the current IP addressbetween runs of the script.
+  - example: "testhost.moneydesktop.com,127.0.0.1"
+
+2. Add a comment and rule to the current IPTables config file or create
+        the rule in Webmin.
+  - Format:
+        # <host_name>
+        -A INPUT -s <ip_address> -j ACCEPT
+  - Example:
+        "# testhost.moneydesktop.com"
+        "-A INPUT -s 127.0.0.1 -j ACCEPT"
+  - Note: This is so I know where the rule goes. All the script does
+        is look for the commented hostname and then insert the rule
+        over whatever is below it currently.
+          If you opt for webmin make sure the "Rule Comment" field has
+        "<host_name>" in it.
+
