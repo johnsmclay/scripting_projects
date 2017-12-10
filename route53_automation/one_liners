@@ -1,0 +1,6 @@
+
+# requires python, awscli
+ZONEID='Z9M0H0OHPNWRP'  # can be see in the console under Hosted Zones
+CNAME='blah.mydomain.com' # the domain name you want to check
+REC_VALUE=`aws route53 list-resource-record-sets --hosted-zone-id ${ZONEID} --query "ResourceRecordSets[?Name == '${CNAME}.']" | python -c "import sys, json; print json.load(sys.stdin)[0]['ResourceRecords'][0]['Value']"`
+echo ${REC_VALUE}
