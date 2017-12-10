@@ -12,6 +12,23 @@
 1. `aws --version` to ensure it installed properly
 1. `aws configure` to add credentials.  Be careful with the default zone thing, it doesn't check it and if you put in an invalid one the cli won't work.  Usually you can leave it blank.
     - __NOTE:__ for security reasons, I would mak an IAM account that only has access to read and write records for Route53 in the zone you want.  It's safer that way in case someone gains access to your router.
+    - here is a decent IAM policy that restricts the user to just reading/writing recordsets in Route53:
+```
+ {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "route53:ChangeResourceRecordSets",
+                "route53:ListResourceRecordSets"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
 
 ## General PfSense stuff
 
