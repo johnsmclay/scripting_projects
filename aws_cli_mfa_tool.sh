@@ -5,11 +5,18 @@
 #   AWS IAM group exists called "RealPerson" which allows you to set your password, setup MFA, and access home directory on S3.
 #   It also has a policy attached that denies all requests (other than MFA setup requests) without MFA present (see policy "RequireMFA+ManageOwnMFA" and/or https://docs.aws.amazon.com/IAM/latest/UserGuide/tutorial_users-self-manage-mfa-and-creds.html ).
 # Usage:
-# 	To run this you need:
+# 	To run this you need---
+#	  Linux or Windows with WSL:
 # 		`sudo apt-get update`
 # 		`sudo apt-get install jq python-pip`
 # 		`pip install awscli`
 # 		`aws configure` (just pick all the defaults, except for your keys)
+#	  Mac/OSX:
+#		#Setup Homebrew
+#		`brew update`
+#		`brew install python3 jq`
+#		`pip3 install --upgrade pip setuptools wheel awscli`
+#		`aws configure` (just pick all the defaults, except for your keys)
 # 	In a script that needs to use this tool just add:
 # 		`SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"` < if you put it in the same folder to find the folder
 #		`source ${SCRIPTDIR}/aws_cli_mfa_tool.sh` < call this script from wherever it is
