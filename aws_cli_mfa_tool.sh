@@ -30,15 +30,15 @@
 #	6. It attempts to get MFA temp creds using the supplied OTP and the MFA serial number it looked up in #4.
 #	7. It parses, uses, and caches the creds in `${MFA_CREDS_CACHE}` along with the expiration of the creds as a comment.
 
-aws_cli_mfa_auth () {
+#== Configurable Vars ==
+# Specify your MFA SN if it isn't browseable
+MFA_SN=${1:-''}
+# Where it will store cached credentials
+MFA_CREDS_CACHE="${HOME}/.aws/mfa_creds"
+# How long the MFA session will be good for in seconds (how long you can use the cached creds)
+MFA_DURATION=129600
 
-	#== Configurable Vars ==
-	# Where it will store cached credentials
-	MFA_CREDS_CACHE="${HOME}/.aws/mfa_creds"
-	# How long the MFA session will be good for in seconds (how long you can use the cached creds)
-	MFA_DURATION=129600
-
-	# Make sure the requirements are installed
+check_dependancies () {
 	if [[ "$(which jq)" = *"not found"* || "$(which pip)" = *"not found"* ]]; then
 		if [[ "$(cat /etc/issue)" = *"Ubuntu"* ]]; then
 			echo "Installing 'jq' and 'python-pip'..."
@@ -58,6 +58,28 @@ aws_cli_mfa_auth () {
 		echo "Time to configure awscli. Please choose the defaults for everything (except your keys)"
 		aws configure
 	fi
+}
+
+# Make sure the requirements are installed
+check_dependancies
+
+aws_cli_get_mfa_sn () {
+	if [[ "${MFA_SN}" == '' ]]; then
+		AWSMFA=`aws iam list-mfa-devices`
+		if [[ "${AWSMFA}" == *"SerialNumber"* ]]; then
+			AWSMFASN=`echo ${AWSMFA} | jq -r '.MFADevices[0].SerialNumber'`
+		else
+			echo ""
+			echo "No MFA device found on account.  MFA is required. Log into the console, go to IAM > Users, then in your account go to 'Security Credentials' and edit 'Assigned MFA Device'."
+			exit 0
+		fi
+	else
+		AWSMFASN="${MFA_SN}"
+	fi
+	AWSUSER=`echo "${AWSMFASN}" | cut -f2 -d'/'`
+}
+
+aws_cli_mfa_auth () {
 
 	# Clear out any temp creds currently in use
 	unset AWS_ACCESS_KEY_ID
@@ -78,38 +100,29 @@ aws_cli_mfa_auth () {
 		unset AWS_SECRET_ACCESS_KEY
 		unset AWS_SESSION_TOKEN
 
-		# find current MFA info
-		AWSMFA=`aws iam list-mfa-devices`
-		if [[ "${AWSMFA}" == *"SerialNumber"* ]]; then
+		aws_cli_get_mfa_sn
+		echo ""
+		echo "MFA SN = ${AWSMFASN}"
+		echo ""
+		echo "Enter MFA token (usually 6 numbers from a token or something like Google Authenticator)"
+		echo ">"
+		read MFAOTP
+		AWSMFATKNRES=`aws sts get-session-token --serial-number ${AWSMFASN} --token-code ${MFAOTP} --output=json --duration-seconds ${MFA_DURATION}`
+		echo "AWSMFATKNRES='${AWSMFATKNRES}'"
+		export AWS_ACCESS_KEY_ID=`echo $AWSMFATKNRES | jq -r '.Credentials.AccessKeyId'`
+		export AWS_SECRET_ACCESS_KEY=`echo $AWSMFATKNRES | jq -r '.Credentials.SecretAccessKey'`
+		export AWS_SESSION_TOKEN=`echo $AWSMFATKNRES | jq -r '.Credentials.SessionToken'`
+		AWS_SESSION_EXP=`echo $AWSMFATKNRES | jq -r '.Credentials.Expiration'`
 
-			AWSMFASN=`echo ${AWSMFA} | jq -r '.MFADevices[0].SerialNumber'`
-			AWSUSER=`echo ${AWSMFA} | jq -r '.MFADevices[0].UserName'`
-			echo ""
-			echo "MFA SN = ${AWSMFASN}"
-			echo ""
-			echo "Enter MFA token (usually 6 numbers from a token or something like Google Authenticator)"
-			echo ">"
-			read MFAOTP
-			AWSMFATKNRES=`aws sts get-session-token --serial-number ${AWSMFASN} --token-code ${MFAOTP} --output=json --duration-seconds ${MFA_DURATION}`
-			export AWS_ACCESS_KEY_ID=`echo $AWSMFATKNRES | jq -r '.Credentials.AccessKeyId'`
-			export AWS_SECRET_ACCESS_KEY=`echo $AWSMFATKNRES | jq -r '.Credentials.SecretAccessKey'`
-			export AWS_SESSION_TOKEN=`echo $AWSMFATKNRES | jq -r '.Credentials.SessionToken'`
-			AWS_SESSION_EXP=`echo $AWSMFATKNRES | jq -r '.Credentials.Expiration'`
-
-			echo '# MFA Creds cached by script' > ${MFA_CREDS_CACHE}
-			cat <<EOL >> ${MFA_CREDS_CACHE}
+		echo '# MFA Creds cached by script' > ${MFA_CREDS_CACHE}
+		cat <<EOL >> ${MFA_CREDS_CACHE}
 export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
 export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 export AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
 # Expires: ${AWS_SESSION_EXP}
 EOL
-			source ${MFA_CREDS_CACHE}
+		source ${MFA_CREDS_CACHE}
 
-		else
-			echo ""
-			echo "No MFA device found on account.  MFA is required. Log into the console, go to IAM > Users, then in your account go to 'Security Credentials' and edit 'Assigned MFA Device'."
-			exit 0
-		fi
 	fi
 
 }
